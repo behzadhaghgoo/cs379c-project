@@ -1,8 +1,8 @@
 # 379c Project
 Soft Attention Experience Replay
 ## What do we need?
-	- Create the AWS instance
-	+ [DQN Module + Environment](https://github.com/higgsfield/RL-Adventure/blob/master/4.prioritized%20dqn.ipynb)
+    - [ ] Create the AWS instance
+	- [x] [DQN Module + Environment](https://github.com/higgsfield/RL-Adventure/blob/master/4.prioritized%20dqn.ipynb)
 	+ Baseline with normal reply on Atari Games 
 	+ Memory Module -> Store memories 
 	- Meta Controller
