@@ -6,6 +6,7 @@ Soft Attention Experience Replay
 - [x] Baseline with normal replay on Atari Games 
 - [x] Memory Module -> Store memories 
 - [ ] Meta Controller
+  - [ ] Decide on the architecture
 
 ### Random
 [GitHub - ShangtongZhang/DeepRL: Modularized Implementation of Deep RL Algorithms in PyTorch](https://github.com/ShangtongZhang/DeepRL)
