@@ -3,7 +3,7 @@ Soft Attention Experience Replay
 ## What do we need?
 - [ ] Create the AWS instance
 - [x] DQN Module + Environment -> (https://github.com/higgsfield/RL-Adventure/blob/master/4.prioritized%20dqn.ipynb)
-- [x] Baseline with normal reply on Atari Games 
+- [x] Baseline with normal replay on Atari Games 
 - [x] Memory Module -> Store memories 
 - [ ] Meta Controller
 
