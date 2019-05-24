@@ -1,5 +1,6 @@
 # 379c Project
-Soft Attention Experience Replay
+Where does prioritized experience replay fail? 
+
 ## What do we need?
 - [ ] Create the AWS instance
 - [x] DQN Module + Environment -> (https://github.com/higgsfield/RL-Adventure/blob/master/4.prioritized%20dqn.ipynb)
