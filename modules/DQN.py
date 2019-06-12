@@ -1,5 +1,11 @@
+import random
+
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import torch.autograd as autograd
+
+from .utils import Variable
 
 
 class DQN(nn.Module):
@@ -11,6 +17,7 @@ class DQN(nn.Module):
             nn.Linear(128, 128),
         )
         self.fc = nn.Linear(128, num_actions)
+        self.num_actions = num_actions
 
     def forward(self, x, return_latent = 'last'):
         """Args:
@@ -30,7 +37,7 @@ class DQN(nn.Module):
             action  = q_value.max(1)[1].data[0]
             action = int(action)
         else:
-            action = random.randrange(num_actions)
+            action = random.randrange(self.num_actions)
         return action
 
 
