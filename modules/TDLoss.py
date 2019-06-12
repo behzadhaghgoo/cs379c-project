@@ -17,7 +17,7 @@ class TDLoss():
         self.exp = exp
         self.meg_norm = meg_norm
         self.hidden = "hidden"
-        self.average_q_values = average_q_values
+        self.method = method 
         self.gamma = 0.99
         self.stored_aug_size = stored_aug_size
 
@@ -51,6 +51,10 @@ class TDLoss():
         return output * self.batch_size
 
     def compute_td_loss(self, cur_model, tar_model, beta, replay_buffer, optimizer):
+        # sorry for bad decomp but need to merge. will come back to this later
+        if self.method == 'average_over_buffer':
+            return compute_td_loss_with_stored_augmentation(self, cur_model, tar_model, beta, replay_buffer, optimizer)
+      
         state, action, reward, next_state, done, indices, weights, state_envs = replay_buffer.sample(self.batch_size, beta)
 
         state      = Variable(torch.FloatTensor(np.float32(state)))
@@ -61,7 +65,7 @@ class TDLoss():
         weights    = Variable(torch.FloatTensor(weights))
         
         # predict q value and store hidden state if averaging q values
-        if self.average_q_values:
+        if self.method == 'average_over_batch':#average_q_values:
             q_values, hiddens = cur_model.forward(state, return_latent = "last")
         else:
             q_values, hiddens = cur_model.forward(state, return_latent = None)
@@ -74,7 +78,7 @@ class TDLoss():
         loss  = (q_value - expected_q_value.detach()).pow(2) * weights
         loss  = loss.mean()
 
-        if self.average_q_values:
+        if self.method == 'average_over_batch': #average_q_values:
             # TODO: computing average over only sampled hidden states is limiting. Ideal case: compute over
             # entire buffer each time. More realistic, have buffer that stores hidden state (limits size of buffer,
             # risk of stale entries if large). Interesting spot for experimentation

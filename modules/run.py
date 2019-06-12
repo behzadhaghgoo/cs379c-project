@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 
-from .DQN import DQN, update_target
+from .DQN import DQN, CnnDQN, update_target
 from .TDLoss import TDLoss
 from .PrioritizedBuffer import PrioritizedBuffer, AugmentedPrioritizedBuffer
 from .utils import *
@@ -53,13 +53,16 @@ def test(val_env, noisyGame, eps, num_val_trials, current_model):
 
 
 def train(env, val_env, 
-	  variance, theta, exp, 
-          average_q_values, meg_norm, hardcoded, 
+          method, var, mean,
+          decision_eps,
+          alpha, beta,
+          hardcoded, cnn,
           invert_actions = False, num_frames = 10000, 
-          num_val_trials = 10, batch_size = 32, gamma = 0.99, 
+          num_val_trials = 10, batch_size = 32, gamma = 0.99,
           num_trials = 5, USE_CUDA = False, device = "", eps = 1., avg_stored=False):
     
-    device = torch.device("cuda")
+    if USE_CUDA:
+        device = torch.device("cuda")
 
     """Args:"""
     losses = []
@@ -76,14 +79,20 @@ def train(env, val_env,
     meta_state = (state, float(noisyGame))
 
     # Initialize replay buffer, model, TD loss, and optimizers
-    if avg_stored:
+
+    if method=='average_over_buffer':
         replay_buffer = AugmentedPrioritizedBuffer(1e6)
     else:
         replay_buffer = PrioritizedBuffer(1e6)
-    
-    current_model = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
-    target_model  = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
-    td_loss = TDLoss(average_q_values=average_q_values)
+
+    if cnn:
+        current_model = CnnDQN(env.observation_space.shape, env.action_space.n)
+        target_model  = CnnDQN(env.observation_space.shape, env.action_space.n)
+    else:
+        current_model = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
+        target_model  = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
+    td_loss = TDLoss(method=method)
+
     optimizer = optim.Adam(current_model.parameters())
     
     # Multi GPU - Under Construction.
@@ -92,14 +101,12 @@ def train(env, val_env,
 
 #     # Single GPU Code
     if USE_CUDA:
-        current_model = nn.DataParallel(current_model, gpu_ids)
-        target_model = nn.DataParallel(target_model, gpu_ids)
         current_model = current_model.cuda()
         target_model  = target_model.cuda()
 
     result_df = pd.DataFrame()
+    theta = 1.
     power = theta
-    var = variance
     all_standard_val_rewards = []
     all_proportions = []
     std_weights = []
@@ -107,14 +114,15 @@ def train(env, val_env,
     std_buffer_example_count = []
     noisy_buffer_example_count = []
 
-    for t in tqdm(range(num_trials)):
+    for t in range(num_trials):
         print("trial number: {}".format(t))
+
         for frame_idx in range(1, num_frames + 1):
             epsilon = EPSILON_BY_FRAME(frame_idx)
             original_action = current_model.act(state, epsilon)
 
             # If in noisy environment, make action random with probability eps
-            if noisyGame and random.uniform(0,1) < eps:
+            if noisyGame and random.uniform(0,1) < decision_eps:
                 if invert_actions:
                     actual_action = 1 - original_action # invert
                 else:
@@ -126,13 +134,14 @@ def train(env, val_env,
 
             # If in noisy environment, make reward completely random
             if noisyGame:
-                reward *= np.random.normal(0, var)
+                reward *= np.random.normal(mean, var)
 
-            next_state = np.append(next_state, float(noisyGame))
+            if not cnn:
+                next_state = np.append(next_state, float(noisyGame))
             meta_next_state = (next_state, float(noisyGame))
             
             # store q values and hidden states in buffer
-            if avg_stored:
+            if method=='average_over_buffer':
                 state_var = Variable(torch.FloatTensor(np.float32(state)))
                 with torch.no_grad():
                     q_values, hiddens = current_model.forward(state_var, return_latent = "last")
@@ -144,7 +153,8 @@ def train(env, val_env,
             episode_reward += reward
 
             if done:
-                noisyGame = 1-noisyGame
+                if not hardcoded:
+                    noisyGame = 1-noisyGame
                 state = env.reset()
                 state = np.append(state, float(noisyGame))
                 meta_state = (state, float(noisyGame))
@@ -153,10 +163,7 @@ def train(env, val_env,
 
             if len(replay_buffer) > batch_size and frame_idx % 4 == 0:
                 beta = BETA_BY_FRAME(frame_idx)
-                if not avg_stored:
-                    loss = td_loss.compute_td_loss(current_model, target_model, beta, replay_buffer, optimizer)
-                else:
-                    loss = td_loss.compute_td_loss_with_stored_augmentation(current_model, target_model, beta, replay_buffer, optimizer)
+                loss = td_loss.compute_td_loss(current_model, target_model, beta, replay_buffer, optimizer)
                 losses.append(loss.data.tolist())
 
             if frame_idx % 200 == 0:
@@ -173,7 +180,6 @@ def train(env, val_env,
 
             if frame_idx % 1000 == 0:
                 update_target(current_model, target_model)
-                print("frame_idx", frame_idx)
 
     result_df['trial_num'] = list(range(int(num_frames / 200))) * num_trials # 50 = 10000 frames / 200 frams
     result_df['frame'] = result_df['trial_num'] * 200
