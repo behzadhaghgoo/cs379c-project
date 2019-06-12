@@ -56,7 +56,7 @@ def train(env, val_env,
           method, var, mean,
           decision_eps,
           alpha, beta,
-          hardcoded, 
+          hardcoded, cnn,
           invert_actions = False, num_frames = 10000, 
           num_val_trials = 10, batch_size = 32, gamma = 0.99, 
           num_trials = 10, USE_CUDA = False, device = "", eps = 1.):
@@ -83,8 +83,12 @@ def train(env, val_env,
     # Initialize replay buffer, model, TD loss, and optimizers
     replay_buffer = PrioritizedBuffer(100000)
     # replay_buffer = PrioritizedBuffer(1000)
-    current_model = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
-    target_model  = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
+    if cnn:
+        current_model = CnnDQN(env.observation_space.shape[0] + 1, env.action_space.n)
+        target_model  = CnnDQN(env.observation_space.shape[0] + 1, env.action_space.n)
+    else:
+        current_model = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
+        target_model  = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
     td_loss = TDLoss(method=method)
     optimizer = optim.Adam(current_model.parameters())
     
