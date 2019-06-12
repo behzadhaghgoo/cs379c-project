@@ -53,8 +53,10 @@ def test(val_env, noisyGame, eps, num_val_trials, current_model):
 
 
 def train(env, val_env, 
-	  variance, theta, exp, 
-          average_q_values, meg_norm, hardcoded, 
+          method, var, mean,
+          decision_eps,
+          alpha, beta,
+          hardcoded, 
           invert_actions = False, num_frames = 10000, 
           num_val_trials = 10, batch_size = 32, gamma = 0.99, 
           num_trials = 5, USE_CUDA = False, device = "", eps = 1.):
@@ -82,7 +84,7 @@ def train(env, val_env,
     # replay_buffer = PrioritizedBuffer(1000)
     current_model = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
     target_model  = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
-    td_loss = TDLoss(average_q_values=average_q_values)
+    td_loss = TDLoss(method=method)
     optimizer = optim.Adam(current_model.parameters())
     
     # Multi GPU - Under Construction.
@@ -97,8 +99,8 @@ def train(env, val_env,
         target_model  = target_model.cuda()
 
     result_df = pd.DataFrame()
+    theta = 1.
     power = theta
-    var = variance
     all_standard_val_rewards = []
     all_proportions = []
     std_weights = []
@@ -117,7 +119,7 @@ def train(env, val_env,
             original_action = current_model.act(state, epsilon)
 
             # If in noisy environment, make action random with probability eps
-            if noisyGame and random.uniform(0,1) < eps:
+            if noisyGame and random.uniform(0,1) < decision_eps:
                 if invert_actions:
                     actual_action = 1 - original_action # invert
                 else:
@@ -129,7 +131,7 @@ def train(env, val_env,
 
             # If in noisy environment, make reward completely random
             if noisyGame:
-                reward *= np.random.normal(0, var)
+                reward *= np.random.normal(mean, var)
 
             next_state = np.append(next_state, float(noisyGame))
             meta_next_state = (next_state, float(noisyGame))
@@ -139,7 +141,8 @@ def train(env, val_env,
             episode_reward += reward
 
             if done:
-                noisyGame = 1-noisyGame
+                if not hardcoded:
+                    noisyGame = 1-noisyGame
                 state = env.reset()
                 state = np.append(state, float(noisyGame))
                 meta_state = (state, float(noisyGame))
