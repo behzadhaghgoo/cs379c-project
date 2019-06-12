@@ -59,12 +59,12 @@ def train(env, val_env,
           hardcoded, cnn,
           invert_actions = False, num_frames = 10000, 
           num_val_trials = 10, batch_size = 32, gamma = 0.99, 
-          num_trials = 10, USE_CUDA = False, device = "", eps = 1.):
+          num_trials = 10, device = "", eps = 1.):
     
     # TODO: comment out later
     num_trials = 1
-    
-    device = torch.device("cuda")
+    if USE_CUDA:
+        device = torch.device("cuda")
 
     """Args:"""
     losses = []
@@ -98,8 +98,6 @@ def train(env, val_env,
 
 #     # Single GPU Code
     if USE_CUDA:
-        current_model = nn.DataParallel(current_model, gpu_ids)
-        target_model = nn.DataParallel(target_model, gpu_ids)
         current_model = current_model.cuda()
         target_model  = target_model.cuda()
 
