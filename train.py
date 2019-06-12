@@ -1,10 +1,15 @@
 import argparse
+from pathlib import Path
+import pickle
 import numpy as np
 import random
 import torch
 import torch.nn as nn
 
 from modules import *
+
+RESULTS = Path("results/results.pkl")
+
 
 def main(args):
 
@@ -26,6 +31,26 @@ def main(args):
                     args.hardcoded,
                     cnn,
                     num_trials=args.num_trials)
+
+    key = "method: {}, var: {}, mean: {}, decision_eps: {}, alpha: {}, beta: {}, hardcoded: {}".format(args.method,
+                                                                                                       args.variance,
+                                                                                                       args.mean,
+                                                                                                       args.decision_eps,
+                                                                                                       args.alpha,
+                                                                                                       args.beta,
+                                                                                                       args.hardcoded)
+
+    # opening
+    if RESULTS.is_file():
+        with open(RESULTS, "rb") as f:
+            d = pickle.load(f)
+    else:
+        d = {}
+
+    # saving
+    d[key] = results
+    with open(RESULTS, "wb") as f:
+        pickle.dump(d, f)
 
 
 if __name__ == '__main__':
