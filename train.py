@@ -13,16 +13,21 @@ RESULTS_DIR = Path("./results/")
 
 
 def main(args):
-
+    print(args.game)
+    print(args.game == 'Alien-RAM')
     if args.game == "Alien":
         env_id = "Alien-v0"
         cnn = True
     elif args.game == "Cartpole":
         env_id = "CartPole-v0"
         cnn = False
+    elif args.game == 'Alien-RAM':
+        env_id = "Alien-ram-v0"
+        cnn = False
     else:
         raise ValueError("Unsupported Game")
 
+    print(env_id)
     env, val_env = get_env(env_id)
     results = train(env, val_env,
                     args.method,
@@ -59,7 +64,7 @@ if __name__ == '__main__':
     parser.add_argument("--num_trials", type=int, default=10)
     parser.add_argument("--variance", type=float, default=1.)
 
-    parser.add_argument("--game", type=str, choices=["Cartpole", "Alien"], default="Cartpole")
+    parser.add_argument("--game", type=str, choices=["Cartpole", "Alien", "Alien-RAM"], default="Cartpole")
 
     args = parser.parse_args()
 
