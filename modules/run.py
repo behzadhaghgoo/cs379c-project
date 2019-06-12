@@ -179,6 +179,7 @@ def train(env, val_env,
             #         plot(frame_idx, all_rewards, losses, standard_val_rewards, noisy_val_rewards, states_count_ratios)
 
             if frame_idx % 1000 == 0:
+                print("Frame {}".format(frame_idx))
                 update_target(current_model, target_model)
 
     result_df['trial_num'] = list(range(int(num_frames / 200))) * num_trials # 50 = 10000 frames / 200 frams
