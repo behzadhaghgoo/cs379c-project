@@ -6,7 +6,7 @@ from .utils import Variable
 
 class TDLoss():
 
-    def __init__(self,batch_size = 32, theta = 1, mode = "dot", exp = False, meg_norm = False, average_q_values = False):
+    def __init__(self,batch_size = 32, theta = 1, mode = "dot", exp = False, meg_norm = False, method = 'PER'):
         """Args:
          mode: "dot" or "euc", the distance function for averaging
          theta: power of weights (see paper) """
@@ -17,7 +17,7 @@ class TDLoss():
         self.exp = exp
         self.meg_norm = meg_norm
         self.hidden = "hidden"
-        self.average_q_values = average_q_values
+        self.method = method 
         self.gamma = 0.99
 
     def hidden_weights(self, h):
@@ -60,7 +60,7 @@ class TDLoss():
         weights    = Variable(torch.FloatTensor(weights))
         
         # predict q value and store hidden state if averaging q values
-        if self.average_q_values:
+        if self.method == 'average_over_batch':#average_q_values:
             q_values, hiddens = cur_model.forward(state, return_latent = "last")
         else:
             q_values, hiddens = cur_model.forward(state, return_latent = None)
@@ -73,7 +73,7 @@ class TDLoss():
         loss  = (q_value - expected_q_value.detach()).pow(2) * weights
         loss  = loss.mean()
 
-        if self.average_q_values:
+        if self.method == 'average_over_batch': #average_q_values:
             # TODO: computing average over only sampled hidden states is limiting. Ideal case: compute over
             # entire buffer each time. More realistic, have buffer that stores hidden state (limits size of buffer,
             # risk of stale entries if large). Interesting spot for experimentation
