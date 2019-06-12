@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 
-from .DQN import DQN, update_target
+from .DQN import DQN, CnnDQN, update_target
 from .TDLoss import TDLoss
 from .PrioritizedBuffer import PrioritizedBuffer
 from .utils import *
@@ -82,8 +82,8 @@ def train(env, val_env,
     replay_buffer = PrioritizedBuffer(100000)
     # replay_buffer = PrioritizedBuffer(1000)
     if cnn:
-        current_model = CnnDQN(env.observation_space.shape[0] + 1, env.action_space.n)
-        target_model  = CnnDQN(env.observation_space.shape[0] + 1, env.action_space.n)
+        current_model = CnnDQN(env.observation_space.shape, env.action_space.n)
+        target_model  = CnnDQN(env.observation_space.shape, env.action_space.n)
     else:
         current_model = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
         target_model  = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
@@ -134,7 +134,8 @@ def train(env, val_env,
             if noisyGame:
                 reward *= np.random.normal(mean, var)
 
-            next_state = np.append(next_state, float(noisyGame))
+            if not cnn:
+                next_state = np.append(next_state, float(noisyGame))
             meta_next_state = (next_state, float(noisyGame))
             replay_buffer.push(meta_state, original_action, reward, meta_next_state, done)
 

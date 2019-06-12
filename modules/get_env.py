@@ -6,7 +6,7 @@ def get_env(env_id):
     if env_id == "CartPole-v0":
         env = gym.make(env_id)
         val_env = gym.make(env_id)
-    elif env_id == "Alien-ram-v0":
+    elif env_id == "Alien-v0":
         env = gym.make(env_id)
         val_env = gym.make(env_id)
     else:
