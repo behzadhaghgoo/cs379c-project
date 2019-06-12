@@ -59,8 +59,9 @@ def train(env, val_env,
           hardcoded, 
           invert_actions = False, num_frames = 10000, 
           num_val_trials = 10, batch_size = 32, gamma = 0.99, 
-          num_trials = 5, USE_CUDA = False, device = "", eps = 1.):
-
+          num_trials = 10, USE_CUDA = False, device = "", eps = 1.):
+    
+    # TODO: comment out later
     num_trials = 1
     
     device = torch.device("cuda")
