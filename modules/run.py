@@ -64,7 +64,6 @@ def train(env, val_env,
     if USE_CUDA:
         device = torch.device("cuda")
 
-    num_frames=2000
     """Args:"""
     losses = []
     all_rewards = []
