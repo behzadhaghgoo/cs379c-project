@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 import pickle
+import pandas as pd
 import numpy as np
 import random
 import torch
@@ -8,7 +9,7 @@ import torch.nn as nn
 
 from modules import *
 
-RESULTS = Path("results/results.pkl")
+RESULTS_DIR = Path("results/")
 
 
 def main(args):
@@ -40,17 +41,9 @@ def main(args):
                                                                                                        args.beta,
                                                                                                        args.hardcoded)
 
-    # opening
-    if RESULTS.is_file():
-        with open(RESULTS, "rb") as f:
-            d = pickle.load(f)
-    else:
-        d = {}
-
-    # saving
-    d[key] = results
-    with open(RESULTS, "wb") as f:
-        pickle.dump(d, f)
+    key = key + ".csv"
+    print("Writing to {}".format(RESULTS_DIR / key))
+    results.to_csv(RESULTS_DIR / key)
 
 
 if __name__ == '__main__':
@@ -61,7 +54,7 @@ if __name__ == '__main__':
     parser.add_argument("--decision_eps", type=float, default=0.)
     parser.add_argument("--hardcoded", type=bool, default=False)
     parser.add_argument("--mean", type=float, default=0.)
-    parser.add_argument("--method", type=str, choices=['PER', 'average_over_batch', 'average_over_all'])
+    parser.add_argument("--method", type=str, choices=['PER', 'average_over_batch', 'average_over_all'], default="PER")
     parser.add_argument("--num_trials", type=int, default=10)
     parser.add_argument("--variance", type=float, default=1.)
 
