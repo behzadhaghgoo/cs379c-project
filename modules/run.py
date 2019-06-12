@@ -61,8 +61,6 @@ def train(env, val_env,
           num_val_trials = 10, batch_size = 32, gamma = 0.99, 
           num_trials = 10, device = "", eps = 1.):
     
-    # TODO: comment out later
-    num_trials = 1
     if USE_CUDA:
         device = torch.device("cuda")
 

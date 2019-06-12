@@ -78,7 +78,7 @@ class PrioritizedBuffer(object):
         
         noisy_weight_sum = 0
         std_weight_sum = 0
-        noisy_count = 0
+        noisy_count = 1e-5
         for i in range(len(self.buffer)):
             state = self.buffer[i][0]
             is_noisy_state = (state.squeeze()[-1] == 1)
