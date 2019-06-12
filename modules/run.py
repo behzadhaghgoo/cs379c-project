@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 
-from .DQN import DQN
+from .DQN import DQN, update_target
 from .TDLoss import TDLoss
 from .PrioritizedBuffer import PrioritizedBuffer
 from .utils import *
