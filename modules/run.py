@@ -81,9 +81,9 @@ def train(env, val_env,
     # Initialize replay buffer, model, TD loss, and optimizers
 
     if method=='average_over_buffer':
-        replay_buffer = AugmentedPrioritizedBuffer(1e6)
+        replay_buffer = AugmentedPrioritizedBuffer(int(1e6))
     else:
-        replay_buffer = PrioritizedBuffer(1e6)
+        replay_buffer = PrioritizedBuffer(int(1e6))
 
     if cnn:
         current_model = CnnDQN(env.observation_space.shape, env.action_space.n)

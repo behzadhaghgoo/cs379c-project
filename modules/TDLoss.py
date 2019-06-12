@@ -6,7 +6,7 @@ from .utils import Variable
 
 class TDLoss():
 
-    def __init__(self, batch_size = 32, stored_aug_size=1000, theta = 1, mode = "dot", exp = False, meg_norm = False, average_q_values = False):
+    def __init__(self, batch_size = 32, stored_aug_size=1000, theta = 1, mode = "dot", exp = False, meg_norm = False, average_q_values = False, method='PER'):
         """Args:
          mode: "dot" or "euc", the distance function for averaging
          theta: power of weights (see paper) """
@@ -53,7 +53,7 @@ class TDLoss():
     def compute_td_loss(self, cur_model, tar_model, beta, replay_buffer, optimizer):
         # sorry for bad decomp but need to merge. will come back to this later
         if self.method == 'average_over_buffer':
-            return compute_td_loss_with_stored_augmentation(self, cur_model, tar_model, beta, replay_buffer, optimizer)
+            return self.compute_td_loss_with_stored_augmentation(cur_model, tar_model, beta, replay_buffer, optimizer)
       
         state, action, reward, next_state, done, indices, weights, state_envs = replay_buffer.sample(self.batch_size, beta)
 
@@ -118,10 +118,8 @@ class TDLoss():
         qs_aug      = torch.max(qs_aug, dim=1)[0]
         
         # predict q value and store hidden state if averaging q values
-        if self.average_q_values:
-            q_values, hiddens = cur_model.forward(states, return_latent = "last")
-        else:
-            q_values, hiddens = cur_model.forward(states, return_latent = None)
+        q_values, hiddens = cur_model.forward(states, return_latent = "last")
+
         next_q_values, _ = tar_model(next_states)
 
         q_value          = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)

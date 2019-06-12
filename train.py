@@ -54,7 +54,7 @@ if __name__ == '__main__':
     parser.add_argument("--decision_eps", type=float, default=0.)
     parser.add_argument("--hardcoded", type=bool, default=False)
     parser.add_argument("--mean", type=float, default=0.)
-    parser.add_argument("--method", type=str, choices=['PER', 'average_over_batch', 'average_over_all'], default="PER")
+    parser.add_argument("--method", type=str, choices=['PER', 'average_over_batch', 'average_over_buffer'], default="PER")
     parser.add_argument("--num_trials", type=int, default=10)
     parser.add_argument("--variance", type=float, default=1.)
 
