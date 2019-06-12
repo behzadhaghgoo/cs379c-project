@@ -114,10 +114,10 @@ def train(env, val_env,
     # TODO: restructure code to incorporate epsilon as experiment hyperparam
     # eps=.5
 
-    for t in tqdm(range(num_trials)):
+    for t in range(num_trials):
         print("trial number: {}".format(t))
         #print("is noisy game?", noisyGame)
-        for frame_idx in range(1, num_frames + 1):
+        for frame_idx in tqdm(range(1, num_frames + 1)):
             epsilon = EPSILON_BY_FRAME(frame_idx)
             original_action = current_model.act(state, epsilon)
 
@@ -177,7 +177,6 @@ def train(env, val_env,
 
             if frame_idx % 1000 == 0:
                 update_target(current_model, target_model)
-                print("frame_idx", frame_idx)
 
     result_df['trial_num'] = list(range(int(num_frames / 200))) * num_trials # 50 = 10000 frames / 200 frams
     result_df['frame'] = result_df['trial_num'] * 200
