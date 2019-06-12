@@ -9,7 +9,7 @@ import torch.nn as nn
 
 from modules import *
 
-RESULTS_DIR = Path("/sailhome/mlko53/neo/results/")
+RESULTS_DIR = Path("./results/")
 
 
 def main(args):
