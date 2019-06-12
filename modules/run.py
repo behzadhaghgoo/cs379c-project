@@ -182,7 +182,8 @@ def train(env, val_env,
                 print("Frame {}".format(frame_idx))
                 update_target(current_model, target_model)
 
-    result_df['trial_num'] = [floor(i*200/num_trials) for i in len(all_proportions)]
+    print(len(all_proportions))
+    result_df['trial_num'] = [math.floor(i*200/num_trials) for i in range(len(all_proportions))]
     result_df['frame'] = result_df['trial_num'] * 200
     result_df['val_reward'] = all_standard_val_rewards
     result_df['proportion'] = all_proportions

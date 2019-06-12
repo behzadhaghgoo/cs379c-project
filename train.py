@@ -33,13 +33,14 @@ def main(args):
                     cnn,
                     num_trials=args.num_trials)
 
-    key = "method: {}, var: {}, mean: {}, decision_eps: {}, alpha: {}, beta: {}, hardcoded: {}".format(args.method,
+    key = "method: {}, var: {}, mean: {}, decision_eps: {}, alpha: {}, beta: {}, hardcoded: {}, num_trials: {}".format(args.method,
                                                                                                        args.variance,
                                                                                                        args.mean,
                                                                                                        args.decision_eps,
                                                                                                        args.alpha,
                                                                                                        args.beta,
-                                                                                                       args.hardcoded)
+                                                                                                       args.hardcoded,
+                                                                                                       args.num_trials)
 
     key = key + ".csv"
     print("Writing to {}".format(RESULTS_DIR / key))
