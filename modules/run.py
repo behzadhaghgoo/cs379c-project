@@ -117,7 +117,10 @@ def train(env, val_env,
 
     for t in range(num_trials):
         print("trial number: {}".format(t))
-
+        if method=='average_over_buffer':
+            replay_buffer = AugmentedPrioritizedBuffer(int(1e6))
+        else:
+            replay_buffer = PrioritizedBuffer(int(1e6))
         for frame_idx in range(1, num_frames + 1):
             epsilon = EPSILON_BY_FRAME(frame_idx)
             original_action = current_model.act(state, epsilon)
