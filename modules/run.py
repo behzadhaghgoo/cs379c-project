@@ -81,11 +81,6 @@ def train(env, val_env,
 
     # Initialize replay buffer, model, TD loss, and optimizers
 
-    if method=='average_over_buffer':
-        replay_buffer = AugmentedPrioritizedBuffer(int(1e6))
-    else:
-        replay_buffer = PrioritizedBuffer(int(1e6))
-
     if cnn:
         current_model = CnnDQN(env.observation_space.shape, env.action_space.n)
         target_model  = CnnDQN(env.observation_space.shape, env.action_space.n)
@@ -116,6 +111,12 @@ def train(env, val_env,
     noisy_buffer_example_count = []
 
     for t in range(num_trials):
+        
+        if method=='average_over_buffer':
+            replay_buffer = AugmentedPrioritizedBuffer(int(1e6))
+        else:
+            replay_buffer = PrioritizedBuffer(int(1e6))
+
         print("trial number: {}".format(t))
         if method=='average_over_buffer':
             replay_buffer = AugmentedPrioritizedBuffer(int(1e6))
