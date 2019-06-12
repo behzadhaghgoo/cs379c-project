@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from .DQN import DQN, update_target
 from .TDLoss import TDLoss
-from .PrioritizedBuffer import PrioritizedBuffer
+from .PrioritizedBuffer import PrioritizedBuffer, AugmentedPrioritizedBuffer
 from .utils import *
 
 beta_start = 0.4
@@ -57,9 +57,7 @@ def train(env, val_env,
           average_q_values, meg_norm, hardcoded, 
           invert_actions = False, num_frames = 10000, 
           num_val_trials = 10, batch_size = 32, gamma = 0.99, 
-          num_trials = 5, USE_CUDA = False, device = "", eps = 1.):
-
-    num_trials = 1
+          num_trials = 5, USE_CUDA = False, device = "", eps = 1., avg_stored=False):
     
     device = torch.device("cuda")
 
@@ -78,8 +76,11 @@ def train(env, val_env,
     meta_state = (state, float(noisyGame))
 
     # Initialize replay buffer, model, TD loss, and optimizers
-    replay_buffer = PrioritizedBuffer(100000)
-    # replay_buffer = PrioritizedBuffer(1000)
+    if avg_stored:
+        replay_buffer = AugmentedPrioritizedBuffer(1e6)
+    else:
+        replay_buffer = PrioritizedBuffer(1e6)
+    
     current_model = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
     target_model  = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
     td_loss = TDLoss(average_q_values=average_q_values)
@@ -105,13 +106,9 @@ def train(env, val_env,
     noisy_weights = []
     std_buffer_example_count = []
     noisy_buffer_example_count = []
-    
-    # TODO: restructure code to incorporate epsilon as experiment hyperparam
-    # eps=.5
 
     for t in tqdm(range(num_trials)):
         print("trial number: {}".format(t))
-        #print("is noisy game?", noisyGame)
         for frame_idx in range(1, num_frames + 1):
             epsilon = EPSILON_BY_FRAME(frame_idx)
             original_action = current_model.act(state, epsilon)
@@ -133,7 +130,15 @@ def train(env, val_env,
 
             next_state = np.append(next_state, float(noisyGame))
             meta_next_state = (next_state, float(noisyGame))
-            replay_buffer.push(meta_state, original_action, reward, meta_next_state, done)
+            
+            # store q values and hidden states in buffer
+            if avg_stored:
+                state_var = Variable(torch.FloatTensor(np.float32(state)))
+                with torch.no_grad():
+                    q_values, hiddens = current_model.forward(state_var, return_latent = "last")
+                replay_buffer.push(meta_state, original_action, reward, meta_next_state, done, hiddens, q_values)
+            else:
+                replay_buffer.push(meta_state, original_action, reward, meta_next_state, done)
 
             meta_state = meta_next_state
             episode_reward += reward
@@ -146,10 +151,12 @@ def train(env, val_env,
                 all_rewards.append(episode_reward)
                 episode_reward = 0
 
-            if len(replay_buffer) > batch_size:
+            if len(replay_buffer) > batch_size and frame_idx % 4 == 0:
                 beta = BETA_BY_FRAME(frame_idx)
-                # TODO: to compare with PER paper, shouldn't this be every 4 frames?
-                loss = td_loss.compute_td_loss(current_model, target_model, beta, replay_buffer, optimizer)
+                if not avg_stored:
+                    loss = td_loss.compute_td_loss(current_model, target_model, beta, replay_buffer, optimizer)
+                else:
+                    loss = td_loss.compute_td_loss_with_stored_augmentation(current_model, target_model, beta, replay_buffer, optimizer)
                 losses.append(loss.data.tolist())
 
             if frame_idx % 200 == 0:
@@ -161,11 +168,6 @@ def train(env, val_env,
                 std_buffer_example_count.append(weight_dict['std_count'])
                 noisy_buffer_example_count.append(weight_dict['noisy_count'])
                 
-                # Verified that standard experience replay weights noisy examples more heavily and oversamples
-                # TODO: run complete experiments and check improvement with proposed replay technique
-#                 print(weight_dict)
-#                 print('Noisy to std weight', noisy_weights[-1]/std_weights[-1])
-#                 print('Proportion of noisy selected (long run): ', all_proportions[-1])
                 
             #         plot(frame_idx, all_rewards, losses, standard_val_rewards, noisy_val_rewards, states_count_ratios)
 

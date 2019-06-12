@@ -96,3 +96,64 @@ class PrioritizedBuffer(object):
 
     def __len__(self):
         return len(self.buffer)
+
+class AugmentedPrioritizedBuffer(PrioritizedBuffer):
+    ''' Prioritized Buffer that stores hidden states + q_values'''
+    def push(self, meta_state, action, reward, meta_next_state, done, hidden, q):
+        state = meta_state[0]
+        state_env = meta_state[1]
+        next_state = meta_next_state[0]
+
+        assert state.ndim == next_state.ndim
+        state      = np.expand_dims(state, 0)
+        next_state = np.expand_dims(next_state, 0)
+        hidden     = np.expand_dims(hidden, 0)
+        q          = np.expand_dims(q, 0)
+
+        max_prio = self.priorities.max() if self.buffer else 1.0
+
+        if len(self.buffer) < self.capacity:
+            self.buffer.append((state, action, reward, next_state, done, int(state_env), hidden, q))
+        else:
+            self.buffer[self.pos] = (state, action, reward, next_state, done, int(state_env), hidden, q)
+
+        self.priorities[self.pos] = max_prio
+        self.pos = (self.pos + 1) % self.capacity
+        
+    def sample(self, batch_size, beta=0.4, uniform=False):
+        if len(self.buffer) == self.capacity:
+            prios = self.priorities
+        else:
+            prios = self.priorities[:self.pos]
+        probs  = prios ** self.prob_alpha
+        probs /= probs.sum()
+        
+        if not uniform:
+            indices = np.random.choice(len(self.buffer), batch_size, p=probs)
+        else:
+            indices = np.random.choice(len(self.buffer), batch_size)
+        
+        samples = [self.buffer[idx] for idx in indices]
+        
+        self.sample_counts[indices] += 1
+
+        total    = len(self.buffer)
+        weights  = (total * probs[indices]) ** (-beta)
+        weights /= (weights.max()) # FIXIT: What if the max is zero?
+        weights  = np.array(weights, dtype=np.float32)
+
+        batch       = list(zip(*samples))
+        states      = np.concatenate(batch[0])
+        actions     = batch[1]
+        rewards     = batch[2]
+        next_states = np.concatenate(batch[3])
+        dones       = batch[4]
+        state_envs = list(batch[5])
+        hiddens     = np.concatenate(batch[6])
+        qs          = np.concatenate(batch[7])
+
+        # increment states count
+        self.states_count[0] += len(state_envs) - sum(state_envs) # states.shape[0] - np.sum(states[:,-1])
+        self.states_count[1] += sum(state_envs)  # np.sum(states[:,-1])
+
+        return states, actions, rewards, next_states, dones, indices, weights, state_envs, hiddens, qs
