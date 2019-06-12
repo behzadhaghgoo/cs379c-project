@@ -64,6 +64,7 @@ def train(env, val_env,
     if USE_CUDA:
         device = torch.device("cuda")
 
+    num_frames=2000
     """Args:"""
     losses = []
     all_rewards = []
@@ -183,7 +184,7 @@ def train(env, val_env,
 
     print(len(all_proportions))
     
-    result_df['frame'] = 200*np.arange(len(all_proportions))
+    result_df['frame'] = 200*np.arange(len(all_proportions)) % num_frames
     result_df['trial_num'] = np.floor(result_df['frame'] / num_frames)
     result_df['val_reward'] = all_standard_val_rewards
     result_df['proportion'] = all_proportions
