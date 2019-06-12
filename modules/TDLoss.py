@@ -6,7 +6,7 @@ from .utils import Variable
 
 class TDLoss():
 
-    def __init__(self,batch_size = 32, theta = 1, mode = "dot", exp = False, meg_norm = False, method = 'PER'):
+    def __init__(self, batch_size = 32, stored_aug_size=1000, theta = 1, mode = "dot", exp = False, meg_norm = False, average_q_values = False):
         """Args:
          mode: "dot" or "euc", the distance function for averaging
          theta: power of weights (see paper) """
@@ -19,6 +19,7 @@ class TDLoss():
         self.hidden = "hidden"
         self.method = method 
         self.gamma = 0.99
+        self.stored_aug_size = stored_aug_size
 
     def hidden_weights(self, h):
         # TODO: rename normalized norm for clarity, implement normalized and unnormalized version (unnormalized
@@ -50,6 +51,10 @@ class TDLoss():
         return output * self.batch_size
 
     def compute_td_loss(self, cur_model, tar_model, beta, replay_buffer, optimizer):
+        # sorry for bad decomp but need to merge. will come back to this later
+        if self.method == 'average_over_buffer':
+            return compute_td_loss_with_stored_augmentation(self, cur_model, tar_model, beta, replay_buffer, optimizer)
+      
         state, action, reward, next_state, done, indices, weights, state_envs = replay_buffer.sample(self.batch_size, beta)
 
         state      = Variable(torch.FloatTensor(np.float32(state)))
@@ -93,3 +98,57 @@ class TDLoss():
         optimizer.step()
 
         return loss
+
+    def compute_td_loss_with_stored_augmentation(self, cur_model, tar_model, beta, replay_buffer, optimizer):
+        states, actions, rewards, next_states, dones, indices, weights, state_envs, hiddens, qs = \
+                                                replay_buffer.sample(self.batch_size, beta)
+        
+        hiddens_aug, qs_aug = replay_buffer.sample(self.stored_aug_size, beta, uniform=True)[-2:]
+        
+        
+        states      = Variable(torch.FloatTensor(np.float32(states)))
+        next_states = Variable(torch.FloatTensor(np.float32(next_states)))
+        actions     = Variable(torch.LongTensor(actions))
+        rewards     = Variable(torch.FloatTensor(rewards))
+        dones       = Variable(torch.FloatTensor(dones))
+        weights    =  Variable(torch.FloatTensor(weights))
+        
+        hiddens_aug = Variable(torch.FloatTensor(np.float32(hiddens_aug)))
+        qs_aug      = Variable(torch.FloatTensor(np.float32(qs_aug)))
+        qs_aug      = torch.max(qs_aug, dim=1)[0]
+        
+        # predict q value and store hidden state if averaging q values
+        if self.average_q_values:
+            q_values, hiddens = cur_model.forward(states, return_latent = "last")
+        else:
+            q_values, hiddens = cur_model.forward(states, return_latent = None)
+        next_q_values, _ = tar_model(next_states)
+
+        q_value          = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
+        next_q_value     = next_q_values.max(1)[0]
+        expected_q_value = rewards + self.gamma * next_q_value * (1 - dones)
+        
+        # compute averaged q values
+        H_complete = torch.cat([hiddens, hiddens_aug], dim=0)
+        q_complete = torch.reshape(torch.cat([q_value, qs_aug], dim=0), (-1,1))
+        
+        similarity_mat = torch.mm(hiddens, torch.transpose(H_complete, 0, 1))
+        normalized_similarity_mat = torch.nn.functional.softmax(similarity_mat, dim=1)
+        avg_q_value = torch.squeeze(torch.mm(normalized_similarity_mat, q_complete))
+        
+
+
+        loss  = (q_value - expected_q_value.detach()).pow(2) * weights
+        loss  = loss.mean()
+        
+        prios = (avg_q_value - expected_q_value.detach()).pow(2) * weights + 1e-5
+
+        optimizer.zero_grad()
+        loss.backward()
+        replay_buffer.update_priorities(indices, prios.data.cpu().numpy())
+        optimizer.step()
+        
+        return loss
+        
+        
+        
