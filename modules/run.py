@@ -153,8 +153,7 @@ def train(env, val_env,
             episode_reward += reward
 
             if done:
-                if not hardcoded:
-                    noisyGame = 1-noisyGame
+                noisyGame = 1-noisyGame
                 state = env.reset()
                 state = np.append(state, float(noisyGame))
                 meta_state = (state, float(noisyGame))
@@ -183,8 +182,9 @@ def train(env, val_env,
                 update_target(current_model, target_model)
 
     print(len(all_proportions))
-    result_df['trial_num'] = [math.floor(i*200/num_trials) for i in range(len(all_proportions))]
-    result_df['frame'] = result_df['trial_num'] * 200
+    
+    result_df['frame'] = 200*np.arange(len(all_proportions))
+    result_df['trial_num'] = np.floor(result_df['frame'] / num_frames)
     result_df['val_reward'] = all_standard_val_rewards
     result_df['proportion'] = all_proportions
     result_df['std_weights'] = std_weights
