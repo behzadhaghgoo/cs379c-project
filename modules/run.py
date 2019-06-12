@@ -40,8 +40,8 @@ def test(val_env, noisyGame, eps, num_val_trials, current_model):
                 next_state, reward, done, _ = val_env.step(actual_action)
                 next_state = np.append(next_state, float(noisyGame))
 
-                if noisyGame:
-                    reward += random.uniform(-1., 1.)
+                # if noisyGame:
+                    # reward += random.uniform(-1., 1.)
 
                 state = next_state
                 episode_reward += reward
@@ -57,7 +57,7 @@ def train(env, val_env,
           decision_eps,
           alpha, beta,
           hardcoded, cnn,
-          invert_actions = False, num_frames = 10000, 
+          invert_actions = False, num_frames = 30000, 
           num_val_trials = 10, batch_size = 32, gamma = 0.99,
           num_trials = 5, USE_CUDA = False, device = "", eps = 1., avg_stored=False):
     
@@ -80,25 +80,6 @@ def train(env, val_env,
 
     # Initialize replay buffer, model, TD loss, and optimizers
 
-    if cnn:
-        current_model = CnnDQN(env.observation_space.shape, env.action_space.n)
-        target_model  = CnnDQN(env.observation_space.shape, env.action_space.n)
-    else:
-        current_model = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
-        target_model  = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
-    td_loss = TDLoss(method=method)
-
-    optimizer = optim.Adam(current_model.parameters())
-    
-    # Multi GPU - Under Construction.
-#     current_model = current_model.to(device)
-#     target_model = target_model.to(device)
-
-#     # Single GPU Code
-    if USE_CUDA:
-        current_model = current_model.cuda()
-        target_model  = target_model.cuda()
-
     result_df = pd.DataFrame()
     theta = 1.
     power = theta
@@ -110,6 +91,27 @@ def train(env, val_env,
     noisy_buffer_example_count = []
 
     for t in range(num_trials):
+
+        if cnn:
+            current_model = CnnDQN(env.observation_space.shape, env.action_space.n)
+            target_model  = CnnDQN(env.observation_space.shape, env.action_space.n)
+        else:
+            current_model = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
+            target_model  = DQN(env.observation_space.shape[0] + 1, env.action_space.n) # BACK IN
+        td_loss = TDLoss(method=method)
+
+        optimizer = optim.Adam(current_model.parameters())
+    
+    # Multi GPU - Under Construction.
+#     current_model = current_model.to(device)
+#     target_model = target_model.to(device)
+
+#     # Single GPU Code
+        if USE_CUDA:
+            current_model = current_model.cuda()
+            target_model  = target_model.cuda()
+
+
         
         if method=='average_over_buffer':
             replay_buffer = AugmentedPrioritizedBuffer(int(1e6))
